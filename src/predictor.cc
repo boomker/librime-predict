@@ -7,9 +7,7 @@
 #include <rime/engine.h>
 #include <rime/key_event.h>
 #include <rime/menu.h>
-#include <rime/platform_info.h>
 #include <rime/segmentation.h>
-#include <rime/service.h>
 #include <rime/translation.h>
 #include <rime/schema.h>
 #include <rime/dict/db_pool_impl.h>
@@ -20,14 +18,11 @@ namespace rime {
 Predictor::Predictor(const Ticket& ticket, an<PredictEngine> predict_engine)
     : Processor(ticket), predict_engine_(predict_engine) {
   if (auto* config = ticket.schema->config()) {
-    const auto platform = GetPlatformInfo(
-        Service::instance().deployer().distribution_code_name);
     bool continuous_prediction = false;
     config->GetString("predictor/trigger", &trigger_prefix_);
     config->GetBool("predictor/continuous_prediction",
                     &continuous_prediction);
-    continuous_prediction_ =
-        continuous_prediction && platform.device_class == DeviceClass::kMobile;
+    continuous_prediction_ = continuous_prediction;
     if (!config->GetString("predictor/cancel_key", &cancel_key_)) {
       config->GetString("predictor/cancel_predict", &cancel_key_);
     }
