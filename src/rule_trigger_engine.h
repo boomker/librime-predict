@@ -47,7 +47,7 @@ class RuleTriggerEngine {
 
   vector<string> Match(const string& query, const string& scene) const;
 
- private:
+ protected:
   void LoadBuiltinCalendarDefaults();
   void InitSchema(sqlite3* db);
   void SeedBuiltinRules(sqlite3* db);

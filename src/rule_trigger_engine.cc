@@ -403,13 +403,29 @@ vector<string> RuleTriggerEngine::Match(const string& query,
   set<string> tags = GetTodayTags(scene, now);
   vector<string> results;
   set<string> seen;
+
+  // First pass: collect all matching candidates
+  vector<string> all_candidates;
   for (const auto& rule : rules_) {
     if (!MatchRule(rule, query, scene, tags, now))
       continue;
-    if (!seen.insert(rule.candidate).second)
-      continue;
-    results.push_back(rule.candidate);
+    if (seen.insert(rule.candidate).second) {
+      all_candidates.push_back(rule.candidate);
+    }
   }
+
+  // Second pass: if any candidate equals the query, return only those
+  for (const auto& candidate : all_candidates) {
+    if (candidate == query) {
+      results.push_back(candidate);
+    }
+  }
+
+  // If no exact match, return all candidates
+  if (results.empty()) {
+    results = std::move(all_candidates);
+  }
+
   return results;
 }
 
@@ -673,7 +689,7 @@ bool RuleTriggerEngine::MatchRule(const TriggerRule& rule,
 
   // 4. month-day range 检查 (支持跨年范围)
   if (!rule.month_day_start.empty() && !rule.month_day_end.empty()) {
-    int current_md = now.tm_mon * 100 + now.tm_mday;
+    int current_md = (now.tm_mon + 1) * 100 + now.tm_mday;
     int start_md = ParseMonthDay(rule.month_day_start);
     int end_md = ParseMonthDay(rule.month_day_end);
 
