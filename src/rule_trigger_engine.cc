@@ -236,6 +236,15 @@ string ReadString(const an<ConfigMap>& map, const string& key) {
   return item ? item->str() : string();
 }
 
+string ReadString(const an<ConfigMap>& map,
+                  const string& key,
+                  const string& default_value) {
+  if (!map)
+    return default_value;
+  auto item = map->GetValue(key);
+  return item ? item->str() : default_value;
+}
+
 vector<string> ReadCandidateList(const an<ConfigMap>& map) {
   vector<string> candidates;
   if (!map)
@@ -261,6 +270,7 @@ vector<string> ReadCandidateList(const an<ConfigMap>& map) {
 
 RuleTriggerEngine::RuleTriggerEngine() {
   LoadBuiltinCalendarDefaults();
+  RegisterTemplates();
 }
 
 bool RuleTriggerEngine::LoadCalendar(const path& calendar_path) {
@@ -322,6 +332,15 @@ void RuleTriggerEngine::LoadFromConfig(Config* config) {
     auto rule_map = As<ConfigMap>(rule_list->GetAt(i));
     if (!rule_map)
       continue;
+
+    // 检查是否为模板规则
+    if (rule_map->Get("template")) {
+      auto expanded = ExpandTemplate(rule_map);
+      rules_.insert(rules_.end(), expanded.begin(), expanded.end());
+      continue;
+    }
+
+    // 普通规则处理（原有逻辑）
     string trigger = ReadString(rule_map, "trigger");
     if (trigger.empty())
       continue;
@@ -728,6 +747,171 @@ bool RuleTriggerEngine::MatchRule(const TriggerRule& rule,
   }
 
   return true;
+}
+
+// ========== 模板系统实现 ==========
+
+void RuleTriggerEngine::RegisterTemplates() {
+  template_registry_["time_greeting"] = ExpandTimeGreeting;
+  template_registry_["holiday_greeting"] = ExpandHolidayGreeting;
+  template_registry_["weekday_reminder"] = ExpandWeekdayReminder;
+}
+
+vector<TriggerRule> RuleTriggerEngine::ExpandTemplate(
+    const an<ConfigMap>& template_config) const {
+  string template_name = ReadString(template_config, "template");
+  if (template_name.empty()) {
+    LOG(WARNING) << "Template config missing 'template' field, skipping";
+    return {};
+  }
+
+  auto it = template_registry_.find(template_name);
+  if (it == template_registry_.end()) {
+    LOG(WARNING) << "Unknown template: " << template_name << ", skipping";
+    return {};
+  }
+
+  int base_priority = ReadInt(template_config, "base_priority", 100);
+  return it->second(template_config, base_priority);
+}
+
+vector<TriggerRule> RuleTriggerEngine::ExpandTimeGreeting(
+    const an<ConfigMap>& config,
+    int base_priority) {
+  vector<TriggerRule> rules;
+  auto items = As<ConfigList>(config->Get("items"));
+  if (!items) {
+    LOG(WARNING) << "time_greeting template missing 'items' field, skipping";
+    return rules;
+  }
+
+  int current_priority = base_priority;
+  for (size_t i = 0; i < items->size(); ++i) {
+    auto item = As<ConfigMap>(items->GetAt(i));
+    if (!item)
+      continue;
+
+    string trigger = ReadString(item, "trigger");
+    int hour_min = ReadInt(item, "hour_min", -1);
+    int hour_max = ReadInt(item, "hour_max", -1);
+    vector<string> candidates = ReadCandidateList(item);
+
+    if (trigger.empty() || candidates.empty()) {
+      LOG(WARNING) << "time_greeting item missing trigger or candidates, "
+                      "skipping";
+      continue;
+    }
+
+    // 验证时间范围
+    if (hour_min >= 0 && hour_max >= 0 && hour_min >= hour_max) {
+      LOG(WARNING) << "time_greeting item has invalid hour range ("
+                   << hour_min << " >= " << hour_max << "), skipping";
+      continue;
+    }
+
+    for (const auto& candidate : candidates) {
+      TriggerRule rule;
+      rule.trigger = trigger;
+      rule.hour_min = hour_min;
+      rule.hour_max = hour_max;
+      rule.candidate = candidate;
+      rule.priority = current_priority--;
+      rule.is_user = true;
+      rules.push_back(std::move(rule));
+    }
+  }
+
+  return rules;
+}
+
+vector<TriggerRule> RuleTriggerEngine::ExpandHolidayGreeting(
+    const an<ConfigMap>& config,
+    int base_priority) {
+  vector<TriggerRule> rules;
+  auto holidays = As<ConfigList>(config->Get("holidays"));
+  if (!holidays) {
+    LOG(WARNING)
+        << "holiday_greeting template missing 'holidays' field, skipping";
+    return rules;
+  }
+
+  string candidate_template =
+      ReadString(config, "candidate_template", "{holiday}快乐");
+  string trigger_field = ReadString(config, "trigger", "");
+
+  int current_priority = base_priority;
+  for (size_t i = 0; i < holidays->size(); ++i) {
+    auto value = holidays->GetValueAt(i);
+    if (!value || value->str().empty())
+      continue;
+
+    string holiday = value->str();
+    string trigger = trigger_field.empty() ? holiday : trigger_field;
+    string candidate = candidate_template;
+
+    // 简单的模板替换：{holiday} -> 实际节日名
+    size_t pos = candidate.find("{holiday}");
+    if (pos != string::npos) {
+      candidate.replace(pos, 9, holiday);
+    }
+
+    TriggerRule rule;
+    rule.trigger = trigger;
+    rule.candidate = candidate;
+    rule.priority = current_priority--;
+    rule.is_user = true;
+    rules.push_back(std::move(rule));
+  }
+
+  return rules;
+}
+
+vector<TriggerRule> RuleTriggerEngine::ExpandWeekdayReminder(
+    const an<ConfigMap>& config,
+    int base_priority) {
+  vector<TriggerRule> rules;
+  auto items = As<ConfigList>(config->Get("items"));
+  if (!items) {
+    LOG(WARNING)
+        << "weekday_reminder template missing 'items' field, skipping";
+    return rules;
+  }
+
+  int current_priority = base_priority;
+  for (size_t i = 0; i < items->size(); ++i) {
+    auto item = As<ConfigMap>(items->GetAt(i));
+    if (!item)
+      continue;
+
+    string trigger = ReadString(item, "trigger");
+    int weekday = ReadInt(item, "weekday", -1);
+    vector<string> candidates = ReadCandidateList(item);
+
+    if (trigger.empty() || candidates.empty()) {
+      LOG(WARNING) << "weekday_reminder item missing required fields, "
+                      "skipping";
+      continue;
+    }
+
+    // 验证 weekday 范围（-1 表示不限制，0-6 表示周日到周六）
+    if (weekday < -1 || weekday > 6) {
+      LOG(WARNING) << "weekday_reminder item has invalid weekday (" << weekday
+                   << "), skipping";
+      continue;
+    }
+
+    for (const auto& candidate : candidates) {
+      TriggerRule rule;
+      rule.trigger = trigger;
+      rule.weekday = weekday;
+      rule.candidate = candidate;
+      rule.priority = current_priority--;
+      rule.is_user = true;
+      rules.push_back(std::move(rule));
+    }
+  }
+
+  return rules;
 }
 
 }  // namespace rime
