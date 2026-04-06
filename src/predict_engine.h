@@ -49,7 +49,8 @@ class PredictDb {
   bool LookupPredictions(const string& query,
                          std::vector<Prediction>* predict) const;
   // Check whether any non-deleted prediction for a key is recent.
-  bool HasRecentPrediction(const string& query, int max_age_seconds = 1800) const;
+  bool HasRecentPrediction(const string& query,
+                           int max_age_seconds = 1800) const;
   void Clear() {
     if (db_) {
       vector<string>().swap(candidates_);

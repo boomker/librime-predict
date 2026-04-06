@@ -151,7 +151,8 @@ static bool SyncPredictDb(Deployer* deployer, const string& db_name) {
     }
 
     path context_file_path = path(it->path()) / context_snapshot_file;
-    if (fs::exists(context_file_path) && fs::is_regular_file(context_file_path)) {
+    if (fs::exists(context_file_path) &&
+        fs::is_regular_file(context_file_path)) {
       LOG(INFO) << "merging predict context snapshot: " << context_file_path;
       if (!predict_db->RestoreContext(context_file_path)) {
         LOG(ERROR) << "failed to merge predict context snapshot: "

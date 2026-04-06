@@ -418,17 +418,16 @@ void RuleTriggerEngine::SeedBuiltinRules(sqlite3* db) {
   sqlite3_exec(db, "BEGIN", nullptr, nullptr, nullptr);
 
   if (current_version < 3) {
-    sqlite3_exec(
-        db,
-        "DELETE FROM trigger_rules "
-        "WHERE trigger='这个接口' "
-        "AND hour_min=-1 "
-        "AND hour_max=-1 "
-        "AND weekday=-1 "
-        "AND tag='scene_programming' "
-        "AND candidate='返回数据' "
-        "AND is_user=0",
-        nullptr, nullptr, nullptr);
+    sqlite3_exec(db,
+                 "DELETE FROM trigger_rules "
+                 "WHERE trigger='这个接口' "
+                 "AND hour_min=-1 "
+                 "AND hour_max=-1 "
+                 "AND weekday=-1 "
+                 "AND tag='scene_programming' "
+                 "AND candidate='返回数据' "
+                 "AND is_user=0",
+                 nullptr, nullptr, nullptr);
   }
 
   sqlite3_stmt* stmt = nullptr;

@@ -563,10 +563,10 @@ static bool IsRecentLearningPrediction(const Prediction& prediction,
 static bool IsBetterRankedLearningCandidate(
     const RankedLearningCandidate& lhs,
     const RankedLearningCandidate& rhs) {
-  if (lhs.commits != rhs.commits) {
-    return lhs.commits > rhs.commits;
+  if (lhs.tick != rhs.tick) {
+    return lhs.tick > rhs.tick;
   }
-  return lhs.tick > rhs.tick;
+  return lhs.commits > rhs.commits;
 }
 
 static void SortPredictions(std::vector<Prediction>& predict) {
@@ -712,9 +712,9 @@ bool PredictEngine::Predict(Context* ctx, const string& context_query) {
           continue;
         }
         if (best_recent_query_candidate.empty() ||
-            prediction.commits > best_recent_query_commits ||
-            (prediction.commits == best_recent_query_commits &&
-             prediction.tick > best_recent_query_tick)) {
+            prediction.tick > best_recent_query_tick ||
+            (prediction.tick == best_recent_query_tick &&
+             prediction.commits > best_recent_query_commits)) {
           best_recent_query_candidate = prediction.word;
           best_recent_query_commits = prediction.commits;
           best_recent_query_tick = prediction.tick;
@@ -742,17 +742,22 @@ bool PredictEngine::Predict(Context* ctx, const string& context_query) {
     }
   }
 
-  if (!best_recent_query_candidate.empty()) {
-    vector<string> best_recent_query = {best_recent_query_candidate};
-    AppendCandidates(best_recent_query, &merged, &seen);
-    AppendCandidates(top_contextual_candidates, &merged, &seen);
+  // Promote rule-based candidates only when no recent learning candidates exist
+  // in either the direct-query (30 min) or contextual (2 hour) windows.
+  const bool has_recent_learning = !best_recent_query_candidate.empty() ||
+                                   !top_contextual_candidates.empty();
+
+  if (!has_recent_learning) {
     AppendCandidates(rule_candidates, &merged, &seen);
-    AppendCandidates(all_learned_candidates, &merged, &seen);
   } else {
+    if (!best_recent_query_candidate.empty()) {
+      vector<string> best_recent_query = {best_recent_query_candidate};
+      AppendCandidates(best_recent_query, &merged, &seen);
+    }
     AppendCandidates(top_contextual_candidates, &merged, &seen);
     AppendCandidates(rule_candidates, &merged, &seen);
-    AppendCandidates(all_learned_candidates, &merged, &seen);
   }
+  AppendCandidates(all_learned_candidates, &merged, &seen);
 
   if (fallback_db_ &&
       (merged.empty() || (min_candidates_ > 0 &&
