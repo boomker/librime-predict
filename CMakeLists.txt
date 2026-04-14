@@ -6,6 +6,7 @@ include_directories(deps/msgpack-c/include)
 include_directories(${RIME_SOURCE_DIR}/deps/leveldb/include)
 
 find_package(SQLite3 REQUIRED)
+include_directories(${SQLite3_INCLUDE_DIRS})
 
 add_library(rime-predict-objs OBJECT ${predict_src})
 if(BUILD_SHARED_LIBS)
