@@ -1,27 +1,20 @@
 #include "predict_engine.h"
 
 #include <algorithm>
-#include <cctype>
 #include <cstdint>
 #include <ctime>
 #include <fstream>
-#include <iterator>
-#include <numeric>
-#include <sstream>
 #include <vector>
 #include <utf8.h>
 #include <boost/algorithm/string.hpp>
 #include <rime_api.h>
 #include <rime/candidate.h>
 #include <rime/context.h>
-#include <rime/engine.h>
-#include <rime/key_event.h>
-#include <rime/menu.h>
-#include <rime/segmentation.h>
+#include <rime/resource.h>
+#include <rime/schema.h>
 #include <rime/service.h>
 #include <rime/ticket.h>
 #include <rime/translation.h>
-#include <rime/schema.h>
 
 namespace rime {
 

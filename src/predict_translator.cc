@@ -4,14 +4,9 @@
 #include <algorithm>
 #include <rime/candidate.h>
 #include <rime/context.h>
-#include <rime/engine.h>
-#include <rime/key_event.h>
 #include <rime/menu.h>
-#include <rime/segmentation.h>
-#include <rime/service.h>
 #include <rime/translation.h>
 #include <rime/schema.h>
-#include <rime/dict/db_pool_impl.h>
 
 namespace rime {
 

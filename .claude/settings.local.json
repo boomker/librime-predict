@@ -10,7 +10,18 @@
       "Bash(make merged-plugins:*)",
       "Bash(ls -lh build/lib/librime*.dylib)",
       "Bash(ls -lh build/lib/librime*.a)",
-      "Bash(ls build/include/rime*.h)"
+      "Bash(ls build/include/rime*.h)",
+      "Bash(gh api:*)",
+      "Bash(rtk gh:*)",
+      "Bash(rtk ls:*)",
+      "Bash(rtk read:*)",
+      "Bash(rtk grep:*)",
+      "Bash(python3 -c \"import sys,json; content=json.load\\(sys.stdin\\)['content']; print\\(content\\)\")",
+      "Bash(rtk curl:*)",
+      "Bash(python3 -c \"import sys,json; items=json.load\\(sys.stdin\\); [print\\(i['name']\\) for i in items]\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d.get\\('content',''\\)[:2000]\\)\")",
+      "Bash(rtk git:*)",
+      "Bash(gh auth:*)"
     ]
   }
 }

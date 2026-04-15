@@ -6,12 +6,10 @@
 #include <rime/context.h>
 #include <rime/engine.h>
 #include <rime/key_event.h>
-#include <rime/menu.h>
-#include <rime/segmentation.h>
-#include <rime/translation.h>
-#include <rime/schema.h>
-#include <rime/dict/db_pool_impl.h>
 #include <rime/key_table.h>
+#include <rime/menu.h>
+#include <rime/schema.h>
+#include <rime/translation.h>
 
 namespace rime {
 
